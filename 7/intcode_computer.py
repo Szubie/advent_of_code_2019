@@ -1,7 +1,7 @@
 class IntcodeComputer:
     def __init__(self, intcode_list):
         self.i = 0
-        self.intcode_list = intcode_list
+        self.intcode_list = intcode_list[:]
         self.opcode_n_params = {
             1: 3,
             2: 3,
@@ -26,7 +26,10 @@ class IntcodeComputer:
             99: self.HALT
         }
         self.jump_opcodes = set([5, 6])
+        self.input_list = []
         self.output_channel = []
+        self.halt_flag = False
+
 
     def parse_opcode(self, opcode):
         ''' Takes full opcode and returns op and param_immediate_mode_mask '''
@@ -65,7 +68,7 @@ class IntcodeComputer:
         self.output_channel.append(output_value)
 
     def HALT(self, parameter_list):
-        self.intcode_list = []
+        self.halt_flag = True
 
     def LESS_THAN(self, parameter_list):
         input_1, input_2, storage_location = parameter_list
@@ -94,9 +97,12 @@ class IntcodeComputer:
         return None
 
     def execute(self, *inputs):
-        self.input_list = list(inputs)
+        self.input_list = self.input_list + list(inputs)
 
         while self.i < len(self.intcode_list):
+            if self.halt_flag == True:
+                return
+
             op, immediate_mode_mask = self.parse_opcode(self.intcode_list[self.i])
             op_params = self.intcode_list[self.i+1:self.i+1+self.opcode_n_params[op]]
             concrete_params = self.resolve_concrete_values(op_params, immediate_mode_mask)
@@ -110,6 +116,6 @@ class IntcodeComputer:
                 self.ops_dict[op](concrete_params)
                 self.i = self.i + self.opcode_n_params[op] + 1
 
-            while len(self.output_channel) > 0:
-                output = self.output_channel.pop()
+            if len(self.output_channel) > 0:
+                output = self.output_channel.pop(0)
                 yield output
